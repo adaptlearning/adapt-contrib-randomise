@@ -1,0 +1,17 @@
+{
+  "name": "adapt-contrib-randomise",
+  "version": "1.0.0",
+  "framework": ">=5.4",
+  "homepage": "https://github.com/adaptlearning/adapt-contrib-randomise",
+  "issues": "https://github.com/adaptlearning/adapt_framework/issues/new",
+  "extension" : "randomise",
+  "displayName" : "Randomise",
+  "description": "An extension which...",
+  "main": "/js/adapt-contrib-randomise.js",
+  "keywords": [
+    "adapt-plugin",
+    "adapt-extension"
+  ],
+  "license": "GPL-3.0",
+  "targetAttribute": "_randomise"
+}
