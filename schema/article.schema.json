@@ -1,0 +1,39 @@
+{
+  "$anchor": "randomise-article",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "$patch": {
+    "source": {
+      "$ref": "article"
+    },
+    "with": {
+      "properties": {
+        "_randomise": {
+          "type": "object",
+          "title": "Randomise",
+          "default": {},
+          "properties": {
+            "_isEnabled": {
+              "type": "boolean",
+              "title": "Enable randomisation",
+              "description": "Determines whether this model should randomise the order of it's child models",
+              "default": false
+            },
+            "_pluckCount": {
+              "type": "number",
+              "title": "Child count",
+              "description": "Specifies the number of children to include. Negative counts will remove that number from the total. Set to `0` to display all children",
+              "default": 0
+            },
+            "_shouldRefreshOnRevisit": {
+              "type": "boolean",
+              "title": "Refresh on revisit",
+              "description": "Determines whether the included models are refreshed when a user revisits the page. Should not be enabled for trickled content",
+              "default": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

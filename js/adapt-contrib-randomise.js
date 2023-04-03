@@ -10,20 +10,9 @@ class Randomise extends Backbone.Controller {
     });
   }
 
-  hasRandomisation(model) {
-    return this.getConfigByModel(model)?._isEnabled;
-  }
-
-  getConfigByModel(model) {
-    return model.get('_randomise');
-  }
-
-  get randomisedModels() {
-    return Data.filter(model => this.hasRandomisation(model));
-  }
-
   onAppDataReady() {
-    this.randomisedModels.forEach(model => new RandomisedSet({ model }));
+    const models = Data.filter(model => model.get('_randomise')?._isEnabled);
+    models.forEach(model => new RandomisedSet({ model }));
   }
 
 }
