@@ -1,88 +1,65 @@
-import Adapt from 'core/js/adapt';
 import Logging from 'core/js/logging';
-import ModifierSet from 'extensions/adapt-contrib-modifiers/js/ModifierSet';
+import {
+  LifecycleSet,
+  StateSetModelChildren
+} from 'extensions/adapt-contrib-scoring/js/adapt-contrib-scoring';
 
-export default class RandomisedSet extends ModifierSet {
+export default class RandomisedSet extends LifecycleSet {
 
   initialize(options = {}) {
     super.initialize({
       ...options,
       _type: 'randomise'
     });
-    if (this.isAwaitingChildren) {
-      Logging.error(`Models cannot be added dynamically when using randomisation. Please check config for ${this.modelId}.`);
-      return;
-    }
+    if (!this.isAwaitingChildren) return;
+    Logging.error(`Models cannot be added dynamically when using randomisation. Please check config for ${this.modelId}.`);
   }
 
   /**
-   * @override
+   * Fetch the config object from the set model.
+   * @returns {Object}
    */
-  setupModels() {
-    if (!this.isEnabled) return;
-    let models = [];
-    const savedModels = this._getSavedModels();
-    if (savedModels) {
-      models = savedModels
-    } else {
-      models = this.originalModels.filter(model => model.getAncestorModels(true).every(model => model.get('_isAvailable')));
-      if (this._pluckCount !== 0) {
-        models = this._shuffle(models);
-        models = this._pluck(models, this._pluckCount);
-      }
-    }
-    this.models = models;
-    this._saveState();
+  get config() {
+    return this.model.get('_randomise');
   }
 
   /**
-   * @override
+   * Create a state object which saves and restores the set models.
+   * @type {StateSetModelChildren}
    */
+  get state() {
+    if (this.isIntersectedSet) return;
+    return (this._state = this._state || new StateSetModelChildren({ set: this }));
+  }
+
+  /** @override */
   get order() {
-    return 2;
-  }
-
-  /**
-   * @extends
-   */
-  get models() {
-    return super.models;
-  }
-
-  /**
-   * @extends
-   */
-  set models(list) {
-    super.models = list;
-    this.collection.reset(this._shuffle(this.originalModels));
+    // 300 is larger than banking (200) and AdaptModelSet (< 100) but lower than scoringAssessment (500)
+    return 300;
   }
 
   /**
    * @override
    */
-  _initConfig() {
-    this._config = this.model.get('_randomise');
-    this._pluckCount = this._config?._pluckCount ?? 0;
-    this._shouldRefreshOnRevisit = this._config._shouldRefreshOnRevisit ?? false;
+  async onRestore() {
+    if (!this.isEnabled) return false;
+    if (!this.state.restore()) return false;
+    await super.onRestore();
+    return true;
   }
 
-  /**
-   * @extends
-   */
-  _setupListeners() {
-    super._setupListeners();
-    if (this._shouldRefreshOnRevisit) this.listenTo(Adapt, 'router:location', this.onRouterLocation);
-    this.listenTo(this.model, 'change:_randomise', this.onModelConfigChange);
-  }
-
-  /**
-   * Returns a shuffled list
-   * @private
-   * @param {Array} list
-   * @returns {[AdaptModel]}
-   */
-  _shuffle(list) {
-    return _.shuffle(list);
+  /** @override */
+  async onStart() {
+    if (!this.isEnabled) return;
+    const pluckCount = this.config?._pluckCount ?? 0;
+    let models = this.availableModels;
+    models = _.shuffle(models);
+    if (pluckCount !== 0) {
+      models = this._pluck(models, pluckCount);
+    }
+    this.model.getChildren().reset(models);
+    this.state.save();
+    await super.onStart();
   }
 
   /**
@@ -100,18 +77,10 @@ export default class RandomisedSet extends ModifierSet {
     return list;
   }
 
-  /**
-   * @todo Refresh doesn't work with trickle due to execution order
-   * @param {Object} location
-   * @listens Adapt#router:location
-   */
-  async onRouterLocation(location) {
-    this.originalModels.forEach(model => delete model._isAvailableChange);
-    if (location._contentType !== 'page') return;
-    const model = location._currentModel;
-    // check the model exists in this location
-    if (!(model.getAllDescendantModels(true).some(model => model === this.model))) return;
-    this._triggerModelRefresh();
+  /** @override */
+  async onVisit() {
+    const shouldRefreshOnRevisit = this.config._shouldRefreshOnRevisit ?? false;
+    if (!shouldRefreshOnRevisit) return;
+    await this.reset();
   }
-
 }
